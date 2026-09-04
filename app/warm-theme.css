@@ -128,5 +128,10 @@ body.warm-theme {
   .warm-theme .sidebar-footer button,.warm-theme .sidebar-footer button:hover { width: 100%; min-height: 44px; padding: 0 13px; justify-content: flex-start; color: white; background: var(--preview-orange); border-radius: 13px; box-shadow: none; }
   .warm-theme .content { padding: 18px 14px 45px; }
   .warm-theme .dashboard-kpis { grid-template-columns: 1fr; }
-  .warm-theme .record-stats { grid-template-columns: 1fr; }
+  .warm-theme .record-stats { margin-bottom: 12px; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .warm-theme .record-stats .kpi-card { min-height: 92px; padding: 13px 14px; border-radius: 16px; }
+  .warm-theme .record-stats .kpi-card::before { display: none; }
+  .warm-theme .record-stats .kpi-label { padding-right: 0; font-size: 9px; }
+  .warm-theme .record-stats .kpi-card > strong { margin-top: 14px; overflow: hidden; font-size: clamp(18px,5.4vw,23px); letter-spacing: -.045em; text-overflow: ellipsis; white-space: nowrap; }
+  .warm-theme .record-stats .kpi-card > p { display: none; }
 }

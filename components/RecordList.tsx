@@ -78,7 +78,7 @@ export function RecordList({ type, role }: { type: FormType; role: Role }) {
 
     {error && <div className="error" style={{ marginBottom: 16 }}>{error}</div>}
 
-    <section className="dashboard-kpis record-stats" style={{ marginBottom: 18 }} aria-label={`${label} summary`}>
+    <section className="dashboard-kpis record-stats" aria-label={`${label} summary`}>
       <article className="kpi-card kpi-primary">
         <div className="kpi-label"><span>{label}s on record</span></div>
         <strong aria-live="polite">{hasLoaded ? data.total.toLocaleString() : "—"}</strong>
