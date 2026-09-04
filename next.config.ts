@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pg", "nodemailer", "exceljs", "pdf-lib"],
   turbopack: { root: process.cwd() },
+  async redirects() {
+    return [
+      { source: "/api/quote/:id/:uuid", destination: "/quote/:id/:uuid", permanent: true },
+      { source: "/api/invoice/:id/:uuid", destination: "/invoice/:id/:uuid", permanent: true },
+    ];
+  },
   async rewrites() {
     return [
       { source: "/user/details", destination: "/api/auth/me" },

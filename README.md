@@ -72,7 +72,7 @@ The legacy `EMAIL_USER` and `EMAIL_PWD` names remain supported as server-only fa
 
 ## Compatibility and storage
 
-The original Express endpoint paths are retained as rewrites, including the public contact endpoint. Set `CORS_DOMAINS` to a comma-separated allowlist when a separate website or legacy browser client calls the application. Set `PUBLIC_APP_URL` to the canonical site origin used in emailed document links; the old `BACKEND_URI` variable is also accepted and its trailing `/api` is removed automatically.
+The original Express endpoint paths are retained as rewrites, including the public contact endpoint. Historical email links at `/api/quote/:id/:uuid` and `/api/invoice/:id/:uuid` permanently redirect to the corresponding public Next.js document pages. Set `CORS_DOMAINS` to a comma-separated allowlist when a separate website or legacy browser client calls the application. Set `PUBLIC_APP_URL` to the canonical site origin used in emailed document links; the old `BACKEND_URI` variable is also accepted and its trailing `/api` is removed automatically.
 
 Uploaded configuration images and generated invoice/quote PDFs default to `public/uploads` and `public/invoices`. For persistent self-hosted storage, set `IMAGE_UPLOAD_PATH` and `INVOICE_OUTPUT_PATH` to durable mounted directories. The database retains the generated invoice ID/path fields used by the original project.
 
