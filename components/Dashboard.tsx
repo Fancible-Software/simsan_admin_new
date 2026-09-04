@@ -111,8 +111,8 @@ export function Dashboard() {
 
   return <div className={`dashboard ${loading ? "is-loading" : ""}`}>
     <div className="page-head dashboard-head">
-      <div><span className="eyebrow">Business pulse</span><h1>Dashboard</h1><p>Revenue, demand and team activity—one clear view of what is moving the company.</p></div>
-      <div className="dashboard-range-label"><span>Showing</span><strong>{formatRange(data?.range)}</strong></div>
+      <div><h1>Dashboard</h1><p>Revenue, demand and team activity—one clear view of what is moving the company.</p></div>
+      <div className="dashboard-head-actions"><Link className="button dashboard-action-primary" href="/admin/quotes/new"><span aria-hidden="true">＋</span> New quote</Link><Link className="button secondary" href="/admin/invoices/new">New invoice</Link></div>
     </div>
 
     <section className="dashboard-filter" aria-label="Dashboard time range">
@@ -122,7 +122,7 @@ export function Dashboard() {
         <label><span>To</span><input type="date" value={customEnd} min={customStart} max={localIso(today)} onChange={(event) => setCustomEnd(event.target.value)} required/></label>
         <button className="button small" type="submit">Apply dates</button>
       </form>}
-      <span className="dashboard-loading" role="status" aria-live="polite">{loading ? "Refreshing…" : "Up to date"}</span>
+      <div className="dashboard-filter-status"><span>{formatRange(data?.range)}</span><strong className="dashboard-loading" role="status" aria-live="polite">{loading ? "Refreshing…" : "Up to date"}</strong></div>
     </section>
 
     {error && <div className="error dashboard-error">{error}</div>}
