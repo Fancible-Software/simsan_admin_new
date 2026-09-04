@@ -24,6 +24,7 @@ export function RecordList({ type, role }: { type: FormType; role: Role }) {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState("");
   const label = type === "FORM" ? "Invoice" : "Quote";
 
@@ -32,6 +33,7 @@ export function RecordList({ type, role }: { type: FormType; role: Role }) {
     setError("");
     try {
       setData(await api<PageData>(`/api/forms?type=${type}&skip=${page * 10}&limit=10&search=${encodeURIComponent(search)}`));
+      setHasLoaded(true);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not load records");
     } finally {
@@ -69,7 +71,7 @@ export function RecordList({ type, role }: { type: FormType; role: Role }) {
       <div>
         <span className="eyebrow">Customer records</span>
         <h1>{label}s</h1>
-        <p>{data.total} {label.toLowerCase()}{data.total === 1 ? "" : "s"} on record.</p>
+        <p>{hasLoaded ? <>{data.total} {label.toLowerCase()}{data.total === 1 ? "" : "s"} on record.</> : "Loading records…"}</p>
       </div>
       {canCreateForm(role, type) && <Link className="button" href={`/admin/${type === "FORM" ? "invoices" : "quotes"}/new`}>New {label.toLowerCase()}</Link>}
     </div>
@@ -79,23 +81,23 @@ export function RecordList({ type, role }: { type: FormType; role: Role }) {
     <section className="dashboard-kpis record-stats" style={{ marginBottom: 18 }} aria-label={`${label} summary`}>
       <article className="kpi-card kpi-primary">
         <div className="kpi-label"><span>{label}s on record</span></div>
-        <strong>{data.total.toLocaleString()}</strong>
-        <p>{search ? "Matching current search" : "All time"}</p>
+        <strong aria-live="polite">{hasLoaded ? data.total.toLocaleString() : "—"}</strong>
+        <p>{hasLoaded ? (search ? "Matching current search" : "All time") : "Loading summary"}</p>
       </article>
       <article className={`kpi-card ${type === "QUOTE" ? "quote" : ""}`}>
         <div className="kpi-label"><span>Total {type === "FORM" ? "billed" : "quoted"} value</span></div>
-        <strong>{money(data.summary.totalValue)}</strong>
-        <p>{search ? "Across matching records" : "All-time value"}</p>
+        <strong aria-live="polite">{hasLoaded ? money(data.summary.totalValue) : "—"}</strong>
+        <p>{hasLoaded ? (search ? "Across matching records" : "All-time value") : "Loading summary"}</p>
       </article>
       <article className="kpi-card">
         <div className="kpi-label"><span>Average {label.toLowerCase()}</span></div>
-        <strong>{money(data.summary.averageValue)}</strong>
-        <p>Per {label.toLowerCase()}</p>
+        <strong aria-live="polite">{hasLoaded ? money(data.summary.averageValue) : "—"}</strong>
+        <p>{hasLoaded ? `Per ${label.toLowerCase()}` : "Loading summary"}</p>
       </article>
       <article className="kpi-card">
         <div className="kpi-label"><span>Unique customers</span></div>
-        <strong>{data.summary.uniqueCustomers.toLocaleString()}</strong>
-        <p>By email address</p>
+        <strong aria-live="polite">{hasLoaded ? data.summary.uniqueCustomers.toLocaleString() : "—"}</strong>
+        <p>{hasLoaded ? "By email address" : "Loading summary"}</p>
       </article>
     </section>
 

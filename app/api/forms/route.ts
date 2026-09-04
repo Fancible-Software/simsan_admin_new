@@ -9,6 +9,11 @@ import { canCreateForm, canViewForm } from "@/lib/permissions";
 import type { FormRecord } from "@/lib/types";
 import { formSchema } from "@/lib/validation";
 
+const finiteFinalAmount = `CASE
+  WHEN trim(f.final_amount) ~ '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)$'
+  THEN trim(f.final_amount)::numeric
+END`;
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await authorized(request); if (auth.response) return auth.response;
@@ -32,25 +37,28 @@ export async function GET(request: NextRequest) {
         values,
       ),
       query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table("form")} f WHERE ${where}`, aggregateValues),
-      query<{ totalValue: string; averageValue: string; uniqueCustomers: string }>(
-        `SELECT coalesce(SUM(f.final_amount::numeric),0)::text AS "totalValue",
-                coalesce(AVG(f.final_amount::numeric),0)::text AS "averageValue",
-                COUNT(DISTINCT lower(f."customerEmail"))::text AS "uniqueCustomers"
+      query<{ totalValue: string; averageValue: string; uniqueCustomers: string; invalidAmountCount: string }>(
+        `SELECT coalesce(SUM(${finiteFinalAmount}),0)::text AS "totalValue",
+                coalesce(AVG(${finiteFinalAmount}),0)::text AS "averageValue",
+                COUNT(DISTINCT lower(f."customerEmail"))::text AS "uniqueCustomers",
+                COUNT(*) FILTER (WHERE ${finiteFinalAmount} IS NULL)::text AS "invalidAmountCount"
          FROM ${table("form")} f WHERE ${where}`,
         aggregateValues,
       ),
     ]);
     const total = Number(count.rows[0].count);
     const summary = summaryResult.rows[0];
-    logger.info("forms.list_viewed", { actorId: auth.user.id, documentType: type, total, searchApplied: Boolean(search), skip, limit });
+    const mappedSummary = {
+      totalValue: Number(summary.totalValue) || 0,
+      averageValue: Number(summary.averageValue) || 0,
+      uniqueCustomers: Number(summary.uniqueCustomers) || 0,
+    };
+    const invalidAmountCount = Number(summary.invalidAmountCount) || 0;
+    logger.info("forms.list_viewed", { actorId: auth.user.id, documentType: type, total, ...mappedSummary, invalidAmountCount, searchApplied: Boolean(search), skip, limit });
     return ok({
       rows: rows.rows,
       total,
-      summary: {
-        totalValue: Number(summary.totalValue) || 0,
-        averageValue: Number(summary.averageValue) || 0,
-        uniqueCustomers: Number(summary.uniqueCustomers) || 0,
-      },
+      summary: mappedSummary,
     });
   } catch (error) { return handleError(error); }
 }

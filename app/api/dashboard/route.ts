@@ -5,6 +5,13 @@ import { query, table } from "@/lib/db";
 import { percentChange, resolveDashboardRange, type DashboardRange } from "@/lib/dashboard";
 import { logger } from "@/lib/logger";
 
+const finiteNumeric = (column: string) => `CASE
+  WHEN trim(${column}) ~ '^[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)$'
+  THEN trim(${column})::numeric
+END`;
+const finalAmount = finiteNumeric("final_amount");
+const formFinalAmount = finiteNumeric("f.final_amount");
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await authorized(request, true); if (auth.response) return auth.response;
@@ -49,20 +56,20 @@ export async function GET(request: NextRequest) {
            (SELECT COUNT(*) FROM ${table("service")} WHERE "isDeleted"=FALSE)::text AS "totalServices",
            (SELECT COUNT(*) FROM ${table("user")} WHERE is_deleted=0 AND is_verified=TRUE)::text AS "verifiedUsers",
            COUNT(*) FILTER (WHERE type='FORM')::text AS invoices,
-           coalesce(SUM(final_amount::numeric) FILTER (WHERE type='FORM'),0)::text AS revenue,
+           coalesce(SUM(${finalAmount}) FILTER (WHERE type='FORM'),0)::text AS revenue,
            COUNT(*) FILTER (WHERE type='QUOTE')::text AS quotes,
-           coalesce(SUM(final_amount::numeric) FILTER (WHERE type='QUOTE'),0)::text AS "quoteValue",
-           coalesce(AVG(final_amount::numeric) FILTER (WHERE type='FORM'),0)::text AS "averageInvoice",
+           coalesce(SUM(${finalAmount}) FILTER (WHERE type='QUOTE'),0)::text AS "quoteValue",
+           coalesce(AVG(${finalAmount}) FILTER (WHERE type='FORM'),0)::text AS "averageInvoice",
            COUNT(DISTINCT lower("customerEmail")) FILTER (WHERE type='FORM')::text AS "uniqueCustomers",
            (SELECT COUNT(*) FROM current_customers c JOIN lifetime_customers l USING(email) WHERE l.invoice_count>1)::text AS "returningCustomers",
            coalesce(SUM(discount::numeric) FILTER (WHERE type='FORM'),0)::text AS discounts,
            (SELECT COUNT(*) FROM ${table("form")} WHERE type='QUOTE' AND "createdAt"<CURRENT_DATE-INTERVAL '30 days')::text AS "staleQuotes",
            (SELECT COUNT(*) FROM previous_forms WHERE type='FORM')::text AS "previousInvoices",
-           coalesce((SELECT SUM(final_amount::numeric) FROM previous_forms WHERE type='FORM'),0)::text AS "previousRevenue",
+           coalesce((SELECT SUM(${finalAmount}) FROM previous_forms WHERE type='FORM'),0)::text AS "previousRevenue",
            (SELECT COUNT(*) FROM previous_forms WHERE type='QUOTE')::text AS "previousQuotes",
-           coalesce((SELECT SUM(final_amount::numeric) FROM previous_forms WHERE type='QUOTE'),0)::text AS "previousQuoteValue",
+           coalesce((SELECT SUM(${finalAmount}) FROM previous_forms WHERE type='QUOTE'),0)::text AS "previousQuoteValue",
            (SELECT COUNT(*) FROM ${table("form")} WHERE type='FORM')::text AS "allInvoices",
-           coalesce((SELECT SUM(final_amount::numeric) FROM ${table("form")} WHERE type='FORM'),0)::text AS "allRevenue"
+           coalesce((SELECT SUM(${finalAmount}) FROM ${table("form")} WHERE type='FORM'),0)::text AS "allRevenue"
          FROM current_forms`,
         bounds,
       ),
@@ -73,8 +80,8 @@ export async function GET(request: NextRequest) {
          SELECT to_char(b.bucket,'YYYY-MM-DD') AS period,
            COUNT(f."formId") FILTER (WHERE f.type='FORM')::text AS "invoiceCount",
            COUNT(f."formId") FILTER (WHERE f.type='QUOTE')::text AS "quoteCount",
-           coalesce(SUM(f.final_amount::numeric) FILTER (WHERE f.type='FORM'),0)::text AS revenue,
-           coalesce(SUM(f.final_amount::numeric) FILTER (WHERE f.type='QUOTE'),0)::text AS "quoteValue"
+           coalesce(SUM(${formFinalAmount}) FILTER (WHERE f.type='FORM'),0)::text AS revenue,
+           coalesce(SUM(${formFinalAmount}) FILTER (WHERE f.type='QUOTE'),0)::text AS "quoteValue"
          FROM buckets b LEFT JOIN ${table("form")} f ON f."createdAt">=GREATEST(b.bucket,$1::date) AND f."createdAt"<LEAST(b.bucket+INTERVAL '${bucketInterval}',$2::date+INTERVAL '1 day')
          GROUP BY b.bucket ORDER BY b.bucket`,
         [range.start, range.end],
@@ -93,19 +100,19 @@ export async function GET(request: NextRequest) {
         `SELECT concat_ws(', ',NULLIF("customerCity",''),NULLIF("customerProvince",'')) AS location,
            COUNT(*) FILTER (WHERE type='FORM')::text AS "invoiceCount",
            COUNT(*) FILTER (WHERE type='QUOTE')::text AS "quoteCount",
-           coalesce(SUM(final_amount::numeric) FILTER (WHERE type='FORM'),0)::text AS revenue
+           coalesce(SUM(${finalAmount}) FILTER (WHERE type='FORM'),0)::text AS revenue
          FROM ${table("form")} WHERE "createdAt">=$1::date AND "createdAt"<($2::date+INTERVAL '1 day')
-         GROUP BY "customerCity","customerProvince" ORDER BY coalesce(SUM(final_amount::numeric) FILTER (WHERE type='FORM'),0) DESC LIMIT 5`,
+         GROUP BY "customerCity","customerProvince" ORDER BY coalesce(SUM(${finalAmount}) FILTER (WHERE type='FORM'),0) DESC LIMIT 5`,
         [range.start, range.end],
       ),
       query<{ name: string; invoiceCount: string; quoteCount: string; revenue: string }>(
         `SELECT coalesce(NULLIF(concat_ws(' ',u.first_name,u.last_name),''),'Unknown') AS name,
            COUNT(*) FILTER (WHERE f.type='FORM')::text AS "invoiceCount",
            COUNT(*) FILTER (WHERE f.type='QUOTE')::text AS "quoteCount",
-           coalesce(SUM(f.final_amount::numeric) FILTER (WHERE f.type='FORM'),0)::text AS revenue
+           coalesce(SUM(${formFinalAmount}) FILTER (WHERE f.type='FORM'),0)::text AS revenue
          FROM ${table("form")} f LEFT JOIN ${table("user")} u ON u.id::text=f."createdBy"
          WHERE f."createdAt">=$1::date AND f."createdAt"<($2::date+INTERVAL '1 day')
-         GROUP BY u.id,u.first_name,u.last_name ORDER BY coalesce(SUM(f.final_amount::numeric) FILTER (WHERE f.type='FORM'),0) DESC LIMIT 5`,
+         GROUP BY u.id,u.first_name,u.last_name ORDER BY coalesce(SUM(${formFinalAmount}) FILTER (WHERE f.type='FORM'),0) DESC LIMIT 5`,
         [range.start, range.end],
       ),
       query<{ formId: number; type: "FORM" | "QUOTE"; customerName: string; customerCity: string; finalAmount: string; createdAt: string }>(
