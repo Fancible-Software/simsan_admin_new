@@ -12,7 +12,7 @@ This is the unified Next.js replacement for the former Angular frontend and Expr
 - User creation, verification, activation, and soft deletion
 - Percentage and fixed-dollar discounts with original five-percent GST behavior
 - Company/invoice configurations with PNG/JPEG upload support
-- Dashboard totals and 30-day invoice activity view
+- Operational dashboard with preset/custom date ranges, prior-period comparisons, revenue and quote pipeline trends, customer retention, quote aging, service demand, market performance, and team output
 - Date-range analytics and native two-sheet Excel export
 - Rich invoice, quote, verification, and promotional emails with office copies
 - Canadian province/city selection and public contact intake API
