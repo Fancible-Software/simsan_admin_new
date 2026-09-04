@@ -28,7 +28,7 @@ const blank: Customer = {
   customerCountry: "Canada", comment: "",
 };
 
-export function FormEditor({ type: initialType, id }: { type: FormType; id?: number }) {
+export function FormEditor({ type: initialType, id, canUseInvoices = true }: { type: FormType; id?: number; canUseInvoices?: boolean }) {
   const router = useRouter();
   const [type, setType] = useState(initialType);
   const [customer, setCustomer] = useState(blank);
@@ -126,13 +126,13 @@ export function FormEditor({ type: initialType, id }: { type: FormType; id?: num
     <div className="page-head"><div><span className="eyebrow">{id ? "Edit record" : "New customer record"}</span><h1>{id ? "Edit" : "Create"} {type === "FORM" ? "invoice" : "quote"}</h1><p>Customer details, selected services and pricing in one place.</p></div></div>
     {error && <div className="error" style={{ marginBottom: 16 }}>{error}</div>}
     <form onSubmit={submit} className="form-stack">
-      <section className="card">
+      {canUseInvoices && <section className="card">
         <h2>Document type</h2>
         <div className="actions">
           <label className="button secondary"><input type="radio" name="type" checked={type === "FORM"} onChange={() => setType("FORM")}/> Invoice</label>
           <label className="button secondary"><input type="radio" name="type" checked={type === "QUOTE"} onChange={() => setType("QUOTE")}/> Quote</label>
         </div>
-      </section>
+      </section>}
       <section className="card">
         <h2>Customer details</h2>
         <div className="form-grid">

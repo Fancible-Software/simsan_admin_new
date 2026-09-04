@@ -5,6 +5,7 @@ import { fail, handleError, ok } from "@/lib/api";
 import { query, table, transaction } from "@/lib/db";
 import { getDocument, sendDocumentEmails } from "@/lib/invoice";
 import { logger } from "@/lib/logger";
+import { canCreateForm } from "@/lib/permissions";
 import type { FormRecord } from "@/lib/types";
 import { formSchema } from "@/lib/validation";
 
@@ -34,8 +35,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await authorized(request, true); if (auth.response || !auth.user) return auth.response;
+    const auth = await authorized(request); if (auth.response || !auth.user) return auth.response;
     const input = formSchema.parse(await request.json());
+    if (!canCreateForm(auth.user.roles, input.type)) {
+      logger.warn("authorization.denied", { path: request.nextUrl.pathname, userId: auth.user.id, reason: "document_create_forbidden", documentType: input.type });
+      return fail("Administrator access required", 403);
+    }
     const form = await transaction(async (client) => {
       const inserted = await client.query<FormRecord>(
         `INSERT INTO ${table("form")} ("invoiceUuid",type,"customerName","invoiceNumber","customerEmail","customerPhone","customerAddress","customerPostalCode","customerCity","customerProvince","customerCountry",total,discount,discount_percent,is_taxable,final_amount,comment,"createdBy")
