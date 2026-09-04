@@ -1,0 +1,13 @@
+.next/
+node_modules/
+.env
+.env.local
+npm-debug.log*
+*.tsbuildinfo
+public/uploads/*
+public/invoices/*
+!public/uploads/.gitkeep
+!public/invoices/.gitkeep
+.vercel
+.env*
+!.env.example

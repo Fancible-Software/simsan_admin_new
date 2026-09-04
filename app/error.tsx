@@ -1,0 +1,2 @@
+"use client";
+export default function ErrorPage({error,reset}:{error:Error&{digest?:string};reset:()=>void}){return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:20}}><div className="card" style={{maxWidth:540}}><span className="eyebrow">Application error</span><h1>Something went wrong</h1><p className="muted">{error.message}</p><button className="button" onClick={reset}>Try again</button></div></main>}

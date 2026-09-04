@@ -1,0 +1,2 @@
+import Link from "next/link";
+export default function NotFound(){return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:20}}><div className="card" style={{maxWidth:480,textAlign:"center"}}><span className="eyebrow">404</span><h1 style={{fontFamily:"Georgia,serif",fontSize:40}}>Nothing here.</h1><p className="muted">This record may not exist, or its secure link is invalid.</p><Link href="/" className="button">Return to Simsan</Link></div></main>}
