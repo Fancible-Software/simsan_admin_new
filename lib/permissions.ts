@@ -1,5 +1,9 @@
 import type { FormType, Role } from "@/lib/types";
 
+export function canViewForm(role: Role, type: FormType) {
+  return role === "admin" || type === "QUOTE";
+}
+
 export function canCreateForm(role: Role, type: FormType) {
   return role === "admin" || type === "QUOTE";
 }

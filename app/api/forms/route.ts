@@ -5,7 +5,7 @@ import { fail, handleError, ok } from "@/lib/api";
 import { query, table, transaction } from "@/lib/db";
 import { getDocument, sendDocumentEmails } from "@/lib/invoice";
 import { logger } from "@/lib/logger";
-import { canCreateForm } from "@/lib/permissions";
+import { canCreateForm, canViewForm } from "@/lib/permissions";
 import type { FormRecord } from "@/lib/types";
 import { formSchema } from "@/lib/validation";
 
@@ -13,7 +13,10 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await authorized(request); if (auth.response) return auth.response;
     const type = request.nextUrl.searchParams.get("type") === "QUOTE" ? "QUOTE" : "FORM";
-    if (type === "FORM" && auth.user?.roles !== "admin") return fail("Administrator access required", 403);
+    if (!auth.user || !canViewForm(auth.user.roles, type)) {
+      logger.warn("authorization.denied", { path: request.nextUrl.pathname, userId: auth.user?.id, reason: "document_list_forbidden", documentType: type });
+      return fail("Administrator access required", 403);
+    }
     const search = (request.nextUrl.searchParams.get("search") || request.nextUrl.searchParams.get("searchTerm") || "").trim();
     const skip = Math.max(0, Number(request.nextUrl.searchParams.get("skip") || 0));
     const limit = Math.min(100, Math.max(1, Number(request.nextUrl.searchParams.get("limit") || 10)));
@@ -22,14 +25,33 @@ export async function GET(request: NextRequest) {
       : `f.type=$1`;
     const values = search ? [type, `%${search}%`, skip, limit] : [type, skip, limit];
     const offsetIndex = search ? 3 : 2;
-    const [rows, count] = await Promise.all([
+    const aggregateValues = search ? [type, `%${search}%`] : [type];
+    const [rows, count, summaryResult] = await Promise.all([
       query<FormRecord>(
         `SELECT f.*,concat_ws(' ',u.first_name,u.last_name) AS "creatorName" FROM ${table("form")} f LEFT JOIN ${table("user")} u ON u.id::text=f."createdBy" WHERE ${where} ORDER BY f."formId" DESC OFFSET $${offsetIndex} LIMIT $${offsetIndex + 1}`,
         values,
       ),
-      query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table("form")} f WHERE ${where}`, search ? [type, `%${search}%`] : [type]),
+      query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table("form")} f WHERE ${where}`, aggregateValues),
+      query<{ totalValue: string; averageValue: string; uniqueCustomers: string }>(
+        `SELECT coalesce(SUM(f.final_amount::numeric),0)::text AS "totalValue",
+                coalesce(AVG(f.final_amount::numeric),0)::text AS "averageValue",
+                COUNT(DISTINCT lower(f."customerEmail"))::text AS "uniqueCustomers"
+         FROM ${table("form")} f WHERE ${where}`,
+        aggregateValues,
+      ),
     ]);
-    return ok({ rows: rows.rows, total: Number(count.rows[0].count) });
+    const total = Number(count.rows[0].count);
+    const summary = summaryResult.rows[0];
+    logger.info("forms.list_viewed", { actorId: auth.user.id, documentType: type, total, searchApplied: Boolean(search), skip, limit });
+    return ok({
+      rows: rows.rows,
+      total,
+      summary: {
+        totalValue: Number(summary.totalValue) || 0,
+        averageValue: Number(summary.averageValue) || 0,
+        uniqueCustomers: Number(summary.uniqueCustomers) || 0,
+      },
+    });
   } catch (error) { return handleError(error); }
 }
 

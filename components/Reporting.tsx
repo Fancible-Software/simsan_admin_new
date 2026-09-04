@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { api } from "@/lib/client-api";
 import { money, shortDate } from "@/lib/format";
 import type { FormRecord, FormType } from "@/lib/types";
+import { Icon } from "@/components/Icons";
 
 interface Result { rows: FormRecord[]; numberOfSales: number; totalSales: number; averageSale: number; uniqueCustomers: number }
 
@@ -59,11 +60,23 @@ export function Reporting() {
   return <>
     <div className="page-head"><div><span className="eyebrow">Business intelligence</span><h1>Reporting</h1><p>Review a period and export a native Excel workbook with Sales and Analytics sheets.</p></div>{data && <button className="button" disabled={!data.rows.length || exporting} onClick={download}>{exporting ? "Preparing…" : "Download Excel"}</button>}</div>
     {error && <div className="error" style={{ marginBottom: 16 }}>{error}</div>}
-    <form className="card form-grid" onSubmit={run} style={{ marginBottom: 20 }}>
-      <Field label="From"><input type="date" value={start} onChange={(event) => setStart(event.target.value)} required/></Field>
-      <Field label="To"><input type="date" value={end} min={start} onChange={(event) => setEnd(event.target.value)} required/></Field>
-      <Field label="Record type"><select value={type} onChange={(event) => setType(event.target.value as FormType)}><option value="FORM">Invoices</option><option value="QUOTE">Quotes</option></select></Field>
-      <div className="field" style={{ justifyContent: "end" }}><button className="button" disabled={busy}>{busy ? "Running…" : "Run report"}</button></div>
+    <form className="reporting-filter-card" onSubmit={run}>
+      <div className="reporting-filter-intro">
+        <span className="reporting-filter-mark"><Icon name="report"/></span>
+        <div><strong>Build your report</strong><span>Choose a period and document type</span></div>
+      </div>
+      <div className="reporting-controls">
+        <Field label="From" htmlFor="report-start">
+          <div className="reporting-control-shell date-control"><span className="reporting-control-icon"><Icon name="calendar"/></span><input id="report-start" type="date" value={start} max={end} onChange={(event) => setStart(event.target.value)} required/></div>
+        </Field>
+        <Field label="To" htmlFor="report-end">
+          <div className="reporting-control-shell date-control"><span className="reporting-control-icon"><Icon name="calendar"/></span><input id="report-end" type="date" value={end} min={start} onChange={(event) => setEnd(event.target.value)} required/></div>
+        </Field>
+        <Field label="Record type" htmlFor="report-type">
+          <div className="reporting-control-shell select-control"><span className="reporting-control-icon"><Icon name="invoice"/></span><select id="report-type" value={type} onChange={(event) => setType(event.target.value as FormType)}><option value="FORM">Invoices</option><option value="QUOTE">Quotes</option></select><span className="reporting-select-arrow"><Icon name="chevron-down"/></span></div>
+        </Field>
+        <button className="button reporting-run-button" disabled={busy}>{busy ? "Running…" : "Run report"}</button>
+      </div>
     </form>
     {data && <>
       <section className="stats"><div className="stat-card"><span>Records</span><strong>{data.numberOfSales}</strong></div><div className="stat-card"><span>Total</span><strong>{money(data.totalSales)}</strong></div><div className="stat-card"><span>Average</span><strong>{money(data.averageSale)}</strong></div><div className="stat-card"><span>Unique customers</span><strong>{data.uniqueCustomers}</strong></div></section>
@@ -72,6 +85,6 @@ export function Reporting() {
   </>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="field"><label>{label}</label>{children}</div>;
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+  return <div className="field reporting-field"><label htmlFor={htmlFor}>{label}</label>{children}</div>;
 }
