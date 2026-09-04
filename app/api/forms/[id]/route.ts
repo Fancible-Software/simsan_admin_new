@@ -50,8 +50,21 @@ export async function DELETE(request: NextRequest, { params }: Context) {
   try {
     const auth = await authorized(request, true); if (auth.response) return auth.response;
     const id = Number((await params).id);
-    const result = await query(`DELETE FROM ${table("form")} WHERE "formId"=$1`, [id]);
-    if (result.rowCount) logger.info("form.deleted", { actorId: auth.user?.id, formId: id });
-    return result.rowCount ? ok(null, "Record deleted") : fail("Record not found", 404);
+    const deleted = await transaction(async (client) => {
+      const form = await client.query<{ type: string }>(
+        `SELECT type FROM ${table("form")} WHERE "formId"=$1 FOR UPDATE`,
+        [id],
+      );
+      if (!form.rows[0]) return null;
+      const services = await client.query(
+        `DELETE FROM ${table("form_to_services")} WHERE "formId"=$1`,
+        [id],
+      );
+      await client.query(`DELETE FROM ${table("form")} WHERE "formId"=$1`, [id]);
+      return { documentType: form.rows[0].type, linkedServiceCount: services.rowCount || 0 };
+    });
+    if (!deleted) return fail("Record not found", 404);
+    logger.info("form.deleted", { actorId: auth.user?.id, formId: id, ...deleted });
+    return ok(null, "Record deleted");
   } catch (error) { return handleError(error); }
 }
